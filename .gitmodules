@@ -1,0 +1,3 @@
+[submodule "external/nbtpp"]
+	path = external/nbtpp
+	url = https://github.com/M4xi1m3/nbtpp.git

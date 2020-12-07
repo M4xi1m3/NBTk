@@ -1,0 +1,7 @@
+/Debug/
+/build/
+.settings
+.cproject
+.project
+/tests/
+/designs/
