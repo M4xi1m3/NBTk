@@ -98,7 +98,8 @@ public:
     }
 
     void open_action() {
-        Gtk::FileChooserDialog file_dialog(*this, "Open NBT File...", Gtk::FileChooserAction::FILE_CHOOSER_ACTION_OPEN, Gtk::DialogFlags::DIALOG_USE_HEADER_BAR);
+        Gtk::FileChooserDialog file_dialog(*this, "Open NBT File...", Gtk::FileChooserAction::FILE_CHOOSER_ACTION_OPEN,
+                Gtk::DialogFlags::DIALOG_USE_HEADER_BAR);
         file_dialog.add_button("Select File", Gtk::ResponseType::RESPONSE_OK);
         file_dialog.add_button("_Cancel", Gtk::ResponseType::RESPONSE_CANCEL);
 
@@ -126,16 +127,7 @@ public:
     }
 
     virtual ~NBTEditor() {
-        delete m_header;
-        delete m_header_menu;
-        delete m_header_menu_btn;
 
-        delete m_about;
-
-        delete m_main;
-        delete m_main_label;
-        delete m_main_scroll;
-        delete m_main_tree;
     }
 private:
     Gtk::HeaderBar *m_header;
