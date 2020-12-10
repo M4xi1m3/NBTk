@@ -3,16 +3,32 @@
 
 #include <gtkmm.h>
 #include <fstream>
+#include <vector>
 
 #include "NBTLoad.hpp"
+#include "NBTPane.hpp"
 
 class NBTEditor: public Gtk::ApplicationWindow {
 public:
     NBTEditor(Glib::RefPtr<Gtk::Application> app) : Gtk::ApplicationWindow() {
         // Load header
-        Glib::RefPtr<Gtk::Builder> header_builder = Gtk::Builder::create_from_file("ui/header.ui");
-        header_builder->get_widget("header", m_header);
-        header_builder->get_widget("header_menu_btn", m_header_menu_btn);
+        Glib::RefPtr<Gtk::Builder> builder = Gtk::Builder::create_from_file("ui/window.ui");
+        builder->get_widget("header", m_header);
+        builder->get_widget("header_menu_btn", m_header_menu_btn);
+
+        // Load header title display / controls
+        builder->get_widget("header_title_box", m_header_title_box);
+        builder->get_widget("header_title", m_header_title);
+        builder->get_widget("header_subtitle", m_header_subtitle);
+        builder->get_widget("header_switcher", m_header_switcher);
+
+        // Load about
+        builder->get_widget("about", m_about);
+
+        // Load main content
+        builder->get_widget("main", m_main);
+        builder->get_widget("main_label", m_main_label);
+        builder->get_widget("main_stack", m_main_stack);
 
         // Load menues
         Glib::RefPtr<Gtk::Builder> menu_builder = Gtk::Builder::create_from_file("ui/menu.ui");
@@ -20,24 +36,12 @@ public:
         Glib::RefPtr<Gio::Menu> gmenu = Glib::RefPtr<Gio::Menu>::cast_dynamic(obj);
         m_header_menu = new Gtk::Popover(*m_header_menu_btn, gmenu);
         m_header_menu_btn->set_popover(*m_header_menu);
-//        new Gtk::Menu(gmenu);
-        // m_header_menu->set_mo
-
-        // Load about menu
-        Glib::RefPtr<Gtk::Builder> about_builder = Gtk::Builder::create_from_file("ui/about.ui");
-        about_builder->get_widget("about", m_about);
-
-        // Load main content
-        Glib::RefPtr<Gtk::Builder> main_builder = Gtk::Builder::create_from_file("ui/main.ui");
-        main_builder->get_widget("main", m_main);
-        main_builder->get_widget("main_label", m_main_label);
-        main_builder->get_widget("main_scroll", m_main_scroll);
-        main_builder->get_widget("main_tree", m_main_tree);
 
         // About click action
         app->add_action("about", [this]() {
             m_about->show();
         });
+
         // Open click action
         app->add_action("open", sigc::mem_fun(this, &NBTEditor::open_action));
 
@@ -46,15 +50,15 @@ public:
         set_icon_from_file("imgs/logo-128.png");
         add(*m_main);
         set_default_size(800, 600);
-
-        m_tree_model = Gtk::TreeStore::create(m_model);
-        m_main_tree->set_model(m_tree_model);
+        update_topbar();
     }
 
-    bool load_file(std::string file_name) {
-        m_main_tree->remove_all_columns();
-        m_tree_model->clear();
+    virtual ~NBTEditor() {
 
+    }
+
+private:
+    bool load_file(std::string file_name, std::string basename, std::string dirname) {
         std::ifstream file(file_name);
         nbtpp::nbt tags;
 
@@ -65,36 +69,33 @@ public:
             return false;
         }
 
-        nbt_load(tags.getTag(), m_tree_model, m_model, nullptr);
-        // tree_model->clear();
-
-        m_str_col = Gtk::CellRendererText();
-        m_px_buf = Gtk::CellRendererPixbuf();
-        m_px_col = Gtk::TreeViewColumn();
-
-        m_px_col.pack_start(m_px_buf, false);
-        m_px_col.pack_start(m_str_col, false);
-
-        m_px_col.set_cell_data_func(m_px_buf, [this](Gtk::CellRenderer* renderer, const Gtk::TreeModel::iterator& iter) {
-            if (iter) {
-                Gtk::TreeModel::Row row = *iter;
-                Glib::RefPtr<Gdk::Pixbuf> icon = row[m_model.m_col_icon];
-                m_px_buf.property_pixbuf() = icon;
-            }
-        });
-
-        m_px_col.set_cell_data_func(m_str_col, [this](Gtk::CellRenderer* renderer, const Gtk::TreeModel::iterator& iter) {
-            if (iter) {
-                Gtk::TreeModel::Row row = *iter;
-                Glib::ustring name = row[m_model.m_col_name];
-                Glib::ustring value = row[m_model.m_col_value];
-                m_str_col.property_text() = name + ": " + value;
-            }
-        });
-
-        m_main_tree->append_column(m_px_col);
+        NBTPane *pane = new NBTPane(tags, basename, dirname);
+        m_main_stack->add(pane->getContent(), file_name, basename);
+        m_tabs.push_back(pane);
 
         return true;
+    }
+
+    void update_topbar() {
+        if (m_tabs.size() <= 0) {
+            m_header_title->set_label("NBTk");
+            m_header_title->show();
+            m_header_subtitle->hide();
+            m_header_title_box->show();
+            m_header_switcher->hide();
+        } else if (m_tabs.size() == 1) {
+            m_header_title->set_label(m_tabs[0]->getFile());
+            m_header_title->show();
+            m_header_subtitle->set_label(m_tabs[0]->getPath());
+            m_header_subtitle->show();
+            m_header_title_box->show();
+            m_header_switcher->hide();
+        } else {
+            m_header_title->hide();
+            m_header_subtitle->hide();
+            m_header_title_box->hide();
+            m_header_switcher->show();
+        }
     }
 
     void open_action() {
@@ -110,42 +111,37 @@ public:
 
             std::cout << "URI selected = " << selected_uri << std::endl;
 
-            if (load_file(selected_uri)) {
+            if (load_file(selected_uri, file_dialog.get_file()->get_basename(), file_dialog.get_file()->get_parent()->get_parse_name())) {
                 std::cout << "Loaded!" << std::endl;
 
-                m_main_scroll->show_all();
-                m_main_label->hide();
+                update_topbar();
 
-                m_header->set_title(file_dialog.get_file()->get_basename());
-                m_header->set_subtitle(file_dialog.get_file()->get_parent()->get_parse_name());
+                m_main_stack->show_all();
+                m_main_label->hide();
             } else {
                 Gtk::MessageDialog error_dialog("Error loading NBT File", false, Gtk::MessageType::MESSAGE_ERROR, Gtk::ButtonsType::BUTTONS_OK);
-                error_dialog.set_secondary_text("An unexpected error happened while loading " + file_dialog.get_file()->get_basename());
+                error_dialog.set_secondary_text("An error happened while loading " + file_dialog.get_file()->get_basename());
                 error_dialog.run();
             }
         }
     }
 
-    virtual ~NBTEditor() {
-
-    }
-private:
     Gtk::HeaderBar *m_header;
     Gtk::Popover *m_header_menu;
     Gtk::MenuButton *m_header_menu_btn;
+
+    Gtk::Box *m_header_title_box;
+    Gtk::Label *m_header_title;
+    Gtk::Label *m_header_subtitle;
+    Gtk::StackSwitcher *m_header_switcher;
 
     Gtk::AboutDialog *m_about;
 
     Gtk::Box *m_main;
     Gtk::Label *m_main_label;
-    Gtk::ScrolledWindow *m_main_scroll;
-    Gtk::TreeView *m_main_tree;
+    Gtk::Stack *m_main_stack;
 
-    NBTModel m_model;
-    Gtk::CellRendererText m_str_col;
-    Gtk::CellRendererPixbuf m_px_buf;
-    Gtk::TreeViewColumn m_px_col;
-    Glib::RefPtr<Gtk::TreeStore> m_tree_model;
+    std::vector<NBTPane*> m_tabs;
 };
 
 #endif
