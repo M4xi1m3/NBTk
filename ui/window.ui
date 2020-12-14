@@ -91,6 +91,7 @@ See the &lt;a href="https://opensource.org/licenses/mit-license.php"&gt;The MIT 
           <object class="GtkStackSwitcher" id="header_switcher">
             <property name="visible">True</property>
             <property name="can-focus">False</property>
+            <property name="homogeneous">True</property>
             <property name="stack">main_stack</property>
           </object>
           <packing>
@@ -157,6 +158,27 @@ See the &lt;a href="https://opensource.org/licenses/mit-license.php"&gt;The MIT 
       </packing>
     </child>
     <child>
+      <object class="GtkButton" id="header_save_btn">
+        <property name="visible">True</property>
+        <property name="sensitive">False</property>
+        <property name="can-focus">True</property>
+        <property name="receives-default">True</property>
+        <property name="action-name">app.save</property>
+        <property name="always-show-image">True</property>
+        <child>
+          <object class="GtkImage">
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="icon-name">document-save</property>
+          </object>
+        </child>
+      </object>
+      <packing>
+        <property name="pack-type">end</property>
+        <property name="position">1</property>
+      </packing>
+    </child>
+    <child>
       <object class="GtkButton">
         <property name="label" translatable="yes">Open</property>
         <property name="visible">True</property>
@@ -165,7 +187,7 @@ See the &lt;a href="https://opensource.org/licenses/mit-license.php"&gt;The MIT 
         <property name="action-name">app.open</property>
       </object>
       <packing>
-        <property name="position">1</property>
+        <property name="position">2</property>
       </packing>
     </child>
   </object>

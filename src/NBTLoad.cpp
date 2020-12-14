@@ -3,7 +3,7 @@
 
 using namespace nbtpp;
 
-void nbt_load(const tag* data, Glib::RefPtr<Gtk::TreeStore>& tree_model, NBTModel& model, const Gtk::TreeNodeChildren* tree) {
+void nbt_load(tag* data, Glib::RefPtr<Gtk::TreeStore>& tree_model, NBTModel& model, const Gtk::TreeNodeChildren* tree) {
     Gtk::TreeModel::Row row;
 
     if (tree == nullptr) {
@@ -15,7 +15,6 @@ void nbt_load(const tag* data, Glib::RefPtr<Gtk::TreeStore>& tree_model, NBTMode
     std::string name = data->name();
     std::string type = name_for_type(data->type());
 
-    row[model.m_col_type] = type;
     row[model.m_col_name] = name;
     row[model.m_col_tag] = data;
 
@@ -73,7 +72,7 @@ void nbt_load(const tag* data, Glib::RefPtr<Gtk::TreeStore>& tree_model, NBTMode
             row[model.m_col_icon] = Gdk::Pixbuf::create_from_file("imgs/tags/list.png")->scale_simple(16, 16, Gdk::InterpType::INTERP_BILINEAR);
             row[model.m_col_value] = std::to_string(l->value().size()) + " entries";
 
-            for (const tag *i : l->value()) {
+            for (tag *i : l->value()) {
                 nbt_load(i, tree_model, model, &row.children());
             }
             break;
@@ -83,7 +82,7 @@ void nbt_load(const tag* data, Glib::RefPtr<Gtk::TreeStore>& tree_model, NBTMode
             row[model.m_col_icon] = Gdk::Pixbuf::create_from_file("imgs/tags/compound.png")->scale_simple(16, 16, Gdk::InterpType::INTERP_BILINEAR);
             row[model.m_col_value] = std::to_string(c->value().size()) + " entries";
 
-            for (const tag *i : c->value()) {
+            for (tag *i : c->value()) {
                 nbt_load(i, tree_model, model, &row.children());
             }
             break;

@@ -9,7 +9,6 @@ public:
     NBTModel() {
         add(m_col_tag);
         add(m_col_icon);
-        add(m_col_type);
         add(m_col_name);
         add(m_col_value);
     }
@@ -18,9 +17,8 @@ public:
 
     }
 
-    Gtk::TreeModelColumn<const nbtpp::tag*> m_col_tag;
+    Gtk::TreeModelColumn<nbtpp::tag*> m_col_tag;
     Gtk::TreeModelColumn<Glib::RefPtr<Gdk::Pixbuf>> m_col_icon;
-    Gtk::TreeModelColumn<Glib::ustring> m_col_type;
     Gtk::TreeModelColumn<Glib::ustring> m_col_name;
     Gtk::TreeModelColumn<Glib::ustring> m_col_value;
 };

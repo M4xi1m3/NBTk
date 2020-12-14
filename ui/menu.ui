@@ -4,6 +4,10 @@
   <menu id='menu_more'>
     <section>
       <item>
+        <attribute name='label' translatable='yes'>Close file</attribute>
+        <attribute name='action'>app.close_file</attribute>
+      </item>
+      <item>
         <attribute name='label' translatable='yes'>About NBTk</attribute>
         <attribute name='action'>app.about</attribute>
       </item>

@@ -15,6 +15,7 @@ public:
         Glib::RefPtr<Gtk::Builder> builder = Gtk::Builder::create_from_file("ui/window.ui");
         builder->get_widget("header", m_header);
         builder->get_widget("header_menu_btn", m_header_menu_btn);
+        builder->get_widget("header_save_btn", m_header_save_btn);
 
         // Load header title display / controls
         builder->get_widget("header_title_box", m_header_title_box);
@@ -60,12 +61,13 @@ public:
 private:
     bool load_file(std::string file_name, std::string basename, std::string dirname) {
         std::ifstream file(file_name);
-        nbtpp::nbt tags;
+        nbtpp::nbt* tags = new nbtpp::nbt();
 
         try {
-            tags.load_file(file);
+            tags->load_file(file);
         } catch (std::exception &e) {
             std::cout << e.what() << std::endl;
+            delete tags;
             return false;
         }
 
@@ -83,6 +85,7 @@ private:
             m_header_subtitle->hide();
             m_header_title_box->show();
             m_header_switcher->hide();
+            m_header_save_btn->set_sensitive(false);
         } else if (m_tabs.size() == 1) {
             m_header_title->set_label(m_tabs[0]->getFile());
             m_header_title->show();
@@ -90,11 +93,13 @@ private:
             m_header_subtitle->show();
             m_header_title_box->show();
             m_header_switcher->hide();
+            m_header_save_btn->set_sensitive(true);
         } else {
             m_header_title->hide();
             m_header_subtitle->hide();
             m_header_title_box->hide();
             m_header_switcher->show();
+            m_header_save_btn->set_sensitive(true);
         }
     }
 
@@ -129,6 +134,7 @@ private:
     Gtk::HeaderBar *m_header;
     Gtk::Popover *m_header_menu;
     Gtk::MenuButton *m_header_menu_btn;
+    Gtk::Button *m_header_save_btn;
 
     Gtk::Box *m_header_title_box;
     Gtk::Label *m_header_title;
