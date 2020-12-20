@@ -12,6 +12,7 @@ using namespace nbtpp;
 
 int main(int argc, char* argv[]) {
     auto app = Gtk::Application::create("io.github.m4xi1m3.nbtk");
+    app->register_application();
 
     NBTEditor editor(app);
     app->run(editor);

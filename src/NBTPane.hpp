@@ -38,6 +38,7 @@ public:
     void save() {
         std::ofstream out(m_path);
         m_tree.save(out);
+        saved = true;
     }
 
     void save_as(const std::string& path, const std::string& file, const std::string& directory) {
@@ -47,6 +48,7 @@ public:
         m_path = path;
         m_file = file;
         m_directory = directory;
+        saved = true;
 
     }
 

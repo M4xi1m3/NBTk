@@ -3,7 +3,7 @@
 
 #include <gtkmm.h>
 #include <fstream>
-#include <vector>
+#include <list>
 
 class NBTEditor;
 
@@ -41,11 +41,16 @@ public:
         m_header_menu = new Gtk::Popover(*m_header_menu_btn, gmenu);
         m_header_menu_btn->set_popover(*m_header_menu);
 
-        // About about action
+        // About action
         app->add_action("about", sigc::mem_fun(m_about, &Gtk::AboutDialog::show));
 
-        // Open click action
+        // Open action
         app->add_action("open", sigc::mem_fun(this, &NBTEditor::open_action));
+        app->add_accelerator("<Primary>o", "app.open");
+
+        // Close action
+        m_app->add_action("closefile", sigc::mem_fun(this, &NBTEditor::close_file));
+        m_app->add_accelerator("<Primary>w", "app.closefile");
 
         // Initialize window
         set_titlebar(*m_header);
@@ -54,10 +59,6 @@ public:
         set_default_size(800, 600);
         update_topbar();
 
-        app->add_accelerator("<Primary>o", "app.open");
-        app->add_accelerator("<Primary>s", "app.save");
-
-        app->add_accelerator("<Primary><shift>s", "app.save_as");
     }
 
     void mark_saved(NBTPane* pane) {
@@ -73,6 +74,41 @@ public:
     }
 
 private:
+    void close_file() {
+        if (m_main_stack->get_visible_child() != nullptr) {
+            NBTPane *pane = static_cast<NBTPane*>(m_main_stack->get_visible_child());
+            if (!pane->saved) {
+                Gtk::MessageDialog unsaved_dialog("Save changes to \"" + pane->getFile() + "\" before closing ?", false, Gtk::MessageType::MESSAGE_WARNING,
+                        Gtk::ButtonsType::BUTTONS_NONE, true);
+                unsaved_dialog.set_transient_for(*this);
+                unsaved_dialog.set_secondary_text("Your changes will be lost if you don't save them.");
+                unsaved_dialog.add_button("Close without saving", 1)->get_style_context()->add_class("destructive-action");
+                unsaved_dialog.add_button("Cancel", 0);
+                this->set_focus(*unsaved_dialog.add_button("Save", 2));
+
+                switch (unsaved_dialog.run()) {
+                    case 0:
+                        return;
+                    case 2:
+                        if (pane->getPath() == "") {
+                            save_as();
+                        } else {
+                            save();
+                        }
+                        // no break
+                    case 1:
+                        break;
+                }
+            }
+
+            m_main_stack->remove(*pane);
+            m_tabs.remove(pane);
+            update_topbar();
+        } else {
+            m_app->quit();
+        }
+    }
+
     void save_as() {
         if (m_main_stack->get_visible_child() != nullptr) {
             NBTPane *pane = static_cast<NBTPane*>(m_main_stack->get_visible_child());
@@ -91,7 +127,8 @@ private:
                     pane->save_as(selected_uri, file_dialog.get_file()->get_basename(), file_dialog.get_file()->get_parent()->get_parse_name());
                     update_topbar();
                 } catch (std::exception &e) {
-                    Gtk::MessageDialog error_dialog("Error saving NBT File", false, Gtk::MessageType::MESSAGE_ERROR, Gtk::ButtonsType::BUTTONS_OK);
+                    Gtk::MessageDialog error_dialog("Error saving NBT File", false, Gtk::MessageType::MESSAGE_ERROR, Gtk::ButtonsType::BUTTONS_OK, true);
+                    error_dialog.set_transient_for(*this);
                     error_dialog.set_secondary_text("An error happened while saving " + file_dialog.get_file()->get_basename());
                     error_dialog.run();
                 }
@@ -102,10 +139,17 @@ private:
     void save() {
         if (m_main_stack->get_visible_child() != nullptr) {
             NBTPane *pane = static_cast<NBTPane*>(m_main_stack->get_visible_child());
+
+            if (pane->getPath() == "") {
+                save_as();
+                return;
+            }
+
             try {
                 pane->save();
             } catch (std::exception &e) {
-                Gtk::MessageDialog error_dialog("Error saving NBT File", false, Gtk::MessageType::MESSAGE_ERROR, Gtk::ButtonsType::BUTTONS_OK);
+                Gtk::MessageDialog error_dialog("Error saving NBT File", false, Gtk::MessageType::MESSAGE_ERROR, Gtk::ButtonsType::BUTTONS_OK, true);
+                error_dialog.set_transient_for(*this);
                 error_dialog.set_secondary_text("An error happened while saving " + pane->getFile());
                 error_dialog.run();
             }
@@ -135,12 +179,16 @@ private:
 
     void update_topbar() {
         if (m_app->has_action("save") && m_tabs.size() <= 0) {
+            m_app->remove_accelerator("app.save");
+            m_app->remove_accelerator("app.saveas");
             m_app->remove_action("save");
-            m_app->remove_action("save_as");
+            m_app->remove_action("saveas");
         } else if (!m_app->has_action("save") && m_tabs.size() > 0) {
             // About save action
             m_app->add_action("save", sigc::mem_fun(this, &NBTEditor::save));
-            m_app->add_action("save_as", sigc::mem_fun(this, &NBTEditor::save_as));
+            m_app->add_action("saveas", sigc::mem_fun(this, &NBTEditor::save_as));
+            m_app->add_accelerator("<Primary>s", "app.save");
+            m_app->add_accelerator("<Primary><shift>s", "app.saveas");
         }
 
         if (m_tabs.size() <= 0) {
@@ -153,9 +201,9 @@ private:
             m_header_save_btn->set_sensitive(false);
         } else if (m_tabs.size() == 1) {
             m_main_label->hide();
-            m_header_title->set_label(m_tabs[0]->getFile());
+            m_header_title->set_label(m_tabs.front()->getFile());
             m_header_title->show();
-            m_header_subtitle->set_label(m_tabs[0]->getDirectory());
+            m_header_subtitle->set_label(m_tabs.front()->getDirectory());
             m_header_subtitle->show();
             m_header_title_box->show();
             m_header_switcher->hide();
@@ -187,7 +235,8 @@ private:
 
                 m_main_stack->show_all();
             } else {
-                Gtk::MessageDialog error_dialog("Error loading NBT File", false, Gtk::MessageType::MESSAGE_ERROR, Gtk::ButtonsType::BUTTONS_OK);
+                Gtk::MessageDialog error_dialog("Error loading NBT File", false, Gtk::MessageType::MESSAGE_ERROR, Gtk::ButtonsType::BUTTONS_OK, true);
+                error_dialog.set_transient_for(*this);
                 error_dialog.set_secondary_text("An error happened while loading " + file_dialog.get_file()->get_basename());
                 error_dialog.run();
             }
@@ -210,7 +259,7 @@ private:
     Gtk::Label *m_main_label;
     Gtk::Stack *m_main_stack;
 
-    std::vector<NBTPane*> m_tabs;
+    std::list<NBTPane*> m_tabs;
 
     Glib::RefPtr<Gtk::Application> m_app;
 };

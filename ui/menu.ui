@@ -5,14 +5,14 @@
     <section>
       <item>
         <attribute name='label' translatable='yes'>Close file</attribute>
-        <attribute name='action'>app.close_file</attribute>
+        <attribute name='action'>app.closefile</attribute>
       </item>
       <item>
         <attribute name='label' translatable='yes'>Save as...</attribute>
-        <attribute name='action'>app.save_as</attribute>
+        <attribute name='action'>app.saveas</attribute>
       </item>
     </section>
-    <section>
+    <section> 
       <item>
         <attribute name='label' translatable='yes'>About NBTk</attribute>
         <attribute name='action'>app.about</attribute>
