@@ -40,6 +40,16 @@ public:
         m_tree.save(out);
     }
 
+    void save_as(const std::string& path, const std::string& file, const std::string& directory) {
+        std::ofstream out(path);
+        m_tree.save(out);
+
+        m_path = path;
+        m_file = file;
+        m_directory = directory;
+
+    }
+
     bool saved = true;
 
 private:
