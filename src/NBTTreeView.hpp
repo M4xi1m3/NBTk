@@ -3,6 +3,9 @@
 
 #include <gtkmm.h>
 
+class NBTEditor;
+class NBTPane;
+
 #include "NBTModel.hpp"
 #include "NBTLoad.hpp"
 
@@ -11,7 +14,7 @@
 
 class NBTTreeView: public Gtk::TreeView {
 public:
-    NBTTreeView() : Gtk::TreeView() {
+    NBTTreeView() : Gtk::TreeView(), m_saved(true) {
 
         // Create tree model
         m_tree_model = Gtk::TreeStore::create(m_model_columns);
@@ -59,11 +62,20 @@ public:
         m_tag->debug(std::cout);
 
         nbt_load(m_tag->content(), m_tree_model, m_model_columns, nullptr);
+
+        m_saved = true;
     }
 
     const nbtpp::nbt* getTag() const {
         return m_tag;
     }
+
+    void setEditor(NBTEditor* editor, NBTPane* pane) {
+        m_editor = editor;
+        m_pane = pane;
+    }
+
+    void save(std::ofstream& out);
 
 protected:
     // Override Signal handler:
@@ -121,11 +133,17 @@ protected:
                 }
 
                 m_tree_model->erase(iter);
+                mark_unsaved();
             }
         }
-
-        m_tag->debug(std::cout);
     }
+
+    void mark_unsaved();
+
+    bool m_saved;
+
+    NBTEditor* m_editor;
+    NBTPane* m_pane;
 
     // Tree model columns
     NBTModel m_model_columns;

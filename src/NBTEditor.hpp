@@ -5,12 +5,15 @@
 #include <fstream>
 #include <vector>
 
+class NBTEditor;
+
 #include "NBTLoad.hpp"
 #include "NBTPane.hpp"
+#include "NBTTreeView.hpp"
 
 class NBTEditor: public Gtk::ApplicationWindow {
 public:
-    NBTEditor(Glib::RefPtr<Gtk::Application> app) : Gtk::ApplicationWindow() {
+    NBTEditor(Glib::RefPtr<Gtk::Application> app) : Gtk::ApplicationWindow(), m_app(app) {
         // Load header
         Glib::RefPtr<Gtk::Builder> builder = Gtk::Builder::create_from_file("ui/window.ui");
         builder->get_widget("header", m_header);
@@ -38,10 +41,8 @@ public:
         m_header_menu = new Gtk::Popover(*m_header_menu_btn, gmenu);
         m_header_menu_btn->set_popover(*m_header_menu);
 
-        // About click action
-        app->add_action("about", [this]() {
-            m_about->show();
-        });
+        // About about action
+        app->add_action("about", sigc::mem_fun(m_about, &Gtk::AboutDialog::show));
 
         // Open click action
         app->add_action("open", sigc::mem_fun(this, &NBTEditor::open_action));
@@ -52,6 +53,18 @@ public:
         add(*m_main);
         set_default_size(800, 600);
         update_topbar();
+
+        app->add_accelerator("<Primary>o", "app.open");
+        app->add_accelerator("<Primary>s", "app.save");
+
+    }
+
+    void mark_saved(NBTPane* pane) {
+        if (m_tabs.size() == 1) {
+            m_header_title->set_label((pane->saved ? "" : "*") + pane->getFile());
+        }
+
+        m_main_stack->child_property_title(*pane) = (pane->saved ? "" : "*") + pane->getFile();
     }
 
     virtual ~NBTEditor() {
@@ -59,9 +72,16 @@ public:
     }
 
 private:
+    void save() {
+        if (m_main_stack->get_visible_child() != nullptr) {
+            NBTPane* pane = static_cast<NBTPane*>(m_main_stack->get_visible_child());
+            pane->save();
+        }
+    }
+
     bool load_file(std::string file_name, std::string basename, std::string dirname) {
         std::ifstream file(file_name);
-        nbtpp::nbt* tags = new nbtpp::nbt();
+        nbtpp::nbt *tags = new nbtpp::nbt();
 
         try {
             tags->load_file(file);
@@ -71,15 +91,25 @@ private:
             return false;
         }
 
-        NBTPane *pane = new NBTPane(tags, basename, dirname);
-        m_main_stack->add(pane->getContent(), file_name, basename);
+        NBTPane *pane = new NBTPane(tags, file_name, basename, dirname, this);
+        m_main_stack->add(*pane, file_name, basename);
+        pane->show();
+        m_main_stack->set_visible_child(*pane);
         m_tabs.push_back(pane);
 
         return true;
     }
 
     void update_topbar() {
+        if (m_app->has_action("save") && m_tabs.size() <= 0) {
+            m_app->remove_action("save");
+        } else if (!m_app->has_action("save") && m_tabs.size() > 0) {
+            // About save action
+            m_app->add_action("save", sigc::mem_fun(this, &NBTEditor::save));
+        }
+
         if (m_tabs.size() <= 0) {
+            m_main_label->show();
             m_header_title->set_label("NBTk");
             m_header_title->show();
             m_header_subtitle->hide();
@@ -87,14 +117,16 @@ private:
             m_header_switcher->hide();
             m_header_save_btn->set_sensitive(false);
         } else if (m_tabs.size() == 1) {
+            m_main_label->hide();
             m_header_title->set_label(m_tabs[0]->getFile());
             m_header_title->show();
-            m_header_subtitle->set_label(m_tabs[0]->getPath());
+            m_header_subtitle->set_label(m_tabs[0]->getDirectory());
             m_header_subtitle->show();
             m_header_title_box->show();
             m_header_switcher->hide();
             m_header_save_btn->set_sensitive(true);
         } else {
+            m_main_label->hide();
             m_header_title->hide();
             m_header_subtitle->hide();
             m_header_title_box->hide();
@@ -122,7 +154,6 @@ private:
                 update_topbar();
 
                 m_main_stack->show_all();
-                m_main_label->hide();
             } else {
                 Gtk::MessageDialog error_dialog("Error loading NBT File", false, Gtk::MessageType::MESSAGE_ERROR, Gtk::ButtonsType::BUTTONS_OK);
                 error_dialog.set_secondary_text("An error happened while loading " + file_dialog.get_file()->get_basename());
@@ -148,6 +179,8 @@ private:
     Gtk::Stack *m_main_stack;
 
     std::vector<NBTPane*> m_tabs;
+
+    Glib::RefPtr<Gtk::Application> m_app;
 };
 
 #endif
