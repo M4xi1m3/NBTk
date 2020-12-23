@@ -34,7 +34,6 @@ set(STDE_HEADERS ${CMAKE_SOURCE_DIR}/external/stde/include)
 # Add nbtpp
 set(HAS_STDE true)
 message(WARNING "Downloading nbtpp...")
-configure_file(CMakeLists.txt.in nbtpp-download/CMakeLists.txt)
 
 execute_process(COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .
     WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/nbtpp-download"
